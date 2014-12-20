@@ -1,0 +1,82 @@
+#!/bin/bash
+
+# EXIT CODES
+EXIT_NO_SUPPORT=1
+EXIT_NO_BACKLIGHT=2
+EXIT_BACKLIGHT_NOT_EXIST=4
+EXIT_BAD_ARGUMENT=16
+
+# ACPI backlight base
+BACKLIGHT_BASE='/sys/class/backlight'
+if [ ! -e $BACKLIGHT_BASE ]; then
+	echo "No ACPI backlight support"
+	exit $EXIT_NO_SUPPORT
+fi
+
+# Preliminary functions
+function listBacklights {
+	ls $BACKLIGHT_BASE
+}
+
+function setBacklight {
+	if [ -z "$1" ]; then
+                echo "No backlight specified"
+                exit $EXIT_BAD_ARGUMENT
+        fi
+	BACKLIGHT=$BACKLIGHT_BASE/$1
+        if [ ! -e "$BACKLIGHT" ]; then
+                echo "$BACKLIGHT does not exist"
+                exit $EXIT_BACKLIGHT_NOT_EXIST
+        fi
+}
+
+# Initial command checks
+if [ ! -z "$1" ]; then
+	case "$1" in
+		ls)
+			listBacklights
+			exit
+		;;
+		-b)
+			shift
+			setBacklight $1
+			shift
+		;;
+	esac
+fi
+
+# If no backlight specified, auto detect and pick first available
+if [ -z "$BACKLIGHT" ]; then
+	for bl in $(ls $BACKLIGHT_BASE); do
+		BACKLIGHT=$BACKLIGHT_BASE/$bl
+		break
+	done
+	if [ -z "$BACKLIGHT" ]; then
+		echo "Could not detect ACPI compatible backlight"
+		exit $EXIT_NO_BACKLIGHT;
+	fi
+fi
+
+function getLevel {
+	cat $BACKLIGHT/brightness
+}
+
+function getMax {
+	cat $BACKLIGHT/max_brightness
+}
+
+# If no operands given, then just get brightness
+if [[ $# == 0 ]]; then
+	CMD=get
+else
+	CMD=$1
+fi
+
+case "$CMD" in
+	get)
+		getLevel
+		;;
+	max)
+		getMax
+		;;
+esac
