@@ -4,6 +4,7 @@
 EXIT_NO_SUPPORT=1
 EXIT_NO_BACKLIGHT=2
 EXIT_BACKLIGHT_NOT_EXIST=4
+EXIT_OPTION_NOT_RECOGNISED=8
 EXIT_BAD_ARGUMENT=16
 
 # ACPI backlight base
@@ -31,7 +32,12 @@ function setBacklight {
 }
 
 # Initial command checks
-if [ ! -z "$1" ]; then
+while [ -n "$1" ]; do
+	# If CMD is set and it wasn't the last argument, it was an unrecognised option
+	if [ -n "$CMD" ]; then
+		echo "Option $CMD not recognised" 
+		exit $OPTION_NOT_RECOGNISED
+	fi
 	case "$1" in
 		ls)
 			listBacklights
@@ -40,10 +46,12 @@ if [ ! -z "$1" ]; then
 		-b)
 			shift
 			setBacklight $1
-			shift
 		;;
+		*)
+			CMD=$1
 	esac
-fi
+	shift
+done
 
 # If no backlight specified, auto detect and pick first available
 if [ -z "$BACKLIGHT" ]; then
@@ -57,6 +65,7 @@ if [ -z "$BACKLIGHT" ]; then
 	fi
 fi
 
+# Define command functions
 function getLevel {
 	cat $BACKLIGHT/brightness
 }
@@ -66,10 +75,9 @@ function getMax {
 }
 
 # If no operands given, then just get brightness
-if [[ $# == 0 ]]; then
+if [ -z "$CMD" ]; then
+	# Set default command
 	CMD=get
-else
-	CMD=$1
 fi
 
 case "$CMD" in
